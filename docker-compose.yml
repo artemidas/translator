@@ -1,0 +1,20 @@
+version: '3.1'
+services:
+    mongodb:
+        image: mongo:4.2.12
+        restart: always
+        container_name: uv-mongodb
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=root
+            - MONGO_INITDB_ROOT_PASSWORD=password
+            - MONGO_INITDB_DATABASE=translator
+        volumes:
+            - mongodb:/data/mongo_db
+            - mongodb_config:/data/mongo_configdb
+            - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+        ports:
+            - 27017:27017
+        command: mongod
+volumes:
+    mongodb:
+    mongodb_config:

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/artemidas/translator/controller"
+	"github.com/artemidas/translator/database"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -13,11 +14,25 @@ import (
 
 func main() {
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", controller.Home)
+
+	db := database.NewMongo()
+
+	translationController := controller.NewTranslationController(db)
+
+	router.HandleFunc("/", translationController.Home)
 	translator := router.PathPrefix("/translate").Subrouter()
-	translator.HandleFunc("/{lang}", controller.Translations).Methods(http.MethodGet)
-	translator.HandleFunc("/{lang}/create", controller.CreateTranslation).Methods(http.MethodPost)
-	translator.HandleFunc("/{lang}/update", controller.UpdateTranslation).Methods(http.MethodPut)
+
+	translator.
+		HandleFunc("/{lang}", translationController.Translations).
+		Methods(http.MethodGet)
+
+	translator.
+		HandleFunc("/{lang}/create", translationController.CreateTranslation).
+		Methods(http.MethodPost)
+
+	translator.
+		HandleFunc("/{lang}/update/{id}", translationController.UpdateTranslation).
+		Methods(http.MethodPut)
 
 	srv := &http.Server{
 		Handler: router,
