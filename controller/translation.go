@@ -2,44 +2,41 @@ package controller
 
 import (
 	"encoding/json"
+	"github.com/artemidas/translator/database"
 	"github.com/artemidas/translator/model"
 	"github.com/artemidas/translator/utils"
 	"github.com/gorilla/mux"
-	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	"net/http"
 )
 
-type TranslationController struct {
-	db *mongo.Client
-}
-
-func NewTranslationController(db *mongo.Client) *TranslationController {
-	return &TranslationController{
-		db: db,
-	}
-}
-
-func (tc *TranslationController) Home(w http.ResponseWriter, r *http.Request) {
+func Home(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Hello World!"})
 }
 
-func (tc *TranslationController) Translations(w http.ResponseWriter, r *http.Request) {
+func Translations(w http.ResponseWriter, r *http.Request) {
+	db := database.NewMongo()
 	vars := mux.Vars(r)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("getting translations for " + vars["lang"]))
+	t := model.Translation{}
+	translations, err := t.GetLocale(db, vars["lang"])
+	if err != nil {
+		utils.RespondHttpError(w, http.StatusInternalServerError, "Error getting ")
+		return
+	}
+	utils.RespondJson(w, http.StatusOK, &translations)
 }
 
-func (tc *TranslationController) CreateTranslation(w http.ResponseWriter, r *http.Request) {
+func CreateTranslation(w http.ResponseWriter, r *http.Request) {
+	db := database.NewMongo()
 	vars := mux.Vars(r)
 	t := model.Translation{}
 	if err := utils.DecodeBody(r, &t); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err := t.Insert(tc.db, vars["lang"])
+	err := t.Insert(db, vars["lang"])
 	if err != nil {
 		log.Fatal("Error creating translation: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -48,6 +45,6 @@ func (tc *TranslationController) CreateTranslation(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusOK)
 }
 
-func (tc *TranslationController) UpdateTranslation(w http.ResponseWriter, r *http.Request) {
+func UpdateTranslation(w http.ResponseWriter, r *http.Request) {
 
 }
