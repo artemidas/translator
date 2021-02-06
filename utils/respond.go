@@ -21,11 +21,12 @@ func EncodeBody(w http.ResponseWriter, v interface{}) error {
 
 func RespondJson(w http.ResponseWriter, code int, data interface{}) {
 	w.WriteHeader(code)
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	EncodeBody(w, data)
 }
 
 func RespondHttpError(w http.ResponseWriter, code int, message string) {
 	w.WriteHeader(code)
+	w.Header().Set("Content-Type", "application/json")
 	EncodeBody(w, &Response{Code: code, Message: message})
 }

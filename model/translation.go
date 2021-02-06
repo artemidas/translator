@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"errors"
+	"github.com/Jeffail/gabs"
 	"github.com/artemidas/translator/database"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,21 +20,31 @@ type Translation struct {
 	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
-func (t *Translation) GetLocale(db *mongo.Client, locale string) ([]bson.M, error) {
+func (t *Translation) GetLocale(db *mongo.Client, locale string) (string, error) {
 	collection := db.Database(database.DbName).Collection(locale)
 	defer db.Disconnect(context.Background())
 
-	cursor, err := collection.Find(context.Background(), bson.D{})
+	cursor, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {
 		log.Fatal(err)
-		return nil, err
+		return "", err
 	}
-	var translations []bson.M
-	if err = cursor.All(context.Background(), &translations); err != nil {
+	var rows []bson.M
+	if err = cursor.All(context.Background(), &rows); err != nil {
 		log.Fatal(err)
-		return nil, err
+		return "", err
 	}
-	return translations, nil
+	// Transform to key value object
+	translations := gabs.New()
+	for _, row := range rows {
+		_, err := translations.SetP(row["value"].(string), row["key"].(string))
+		if err != nil {
+			log.Fatal(err)
+			return "", err
+		}
+	}
+
+	return translations.String(), nil
 }
 
 func (t *Translation) Insert(db *mongo.Client, locale string) error {
@@ -42,6 +54,20 @@ func (t *Translation) Insert(db *mongo.Client, locale string) error {
 	_, err := c.InsertOne(context.TODO(), t)
 	defer db.Disconnect(context.Background())
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *Translation) Update(db *mongo.Client, locale string, objectID string) error {
+	c := db.Database(database.DbName).Collection(locale)
+	id, _ := primitive.ObjectIDFromHex(objectID)
+	if id.IsZero() {
+		return errors.New("record not found")
+	}
+	_, err := c.UpdateOne(context.TODO(), bson.M{"_id": id}, bson.D{{"$set", bson.D{{"value", t.Value}}}})
+	if err != nil {
+		log.Fatal(err)
 		return err
 	}
 	return nil

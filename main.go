@@ -12,8 +12,8 @@ func main() {
 	router := mux.NewRouter().StrictSlash(true)
 
 	router.HandleFunc("/", controller.Home)
-	translator := router.PathPrefix("/translate").Subrouter()
-	translator.HandleFunc("/{lang}", controller.Translations).Methods(http.MethodGet)
+	translator := router.PathPrefix("/api/translate").Subrouter()
+	translator.HandleFunc("/{lang}", controller.GenerateTranslation).Methods(http.MethodGet)
 	translator.HandleFunc("/{lang}/create", controller.CreateTranslation).Methods(http.MethodPost)
 	translator.HandleFunc("/{lang}/update/{id}", controller.UpdateTranslation).Methods(http.MethodPut)
 

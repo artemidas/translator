@@ -16,16 +16,19 @@ func Home(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Hello World!"})
 }
 
-func Translations(w http.ResponseWriter, r *http.Request) {
+func GenerateTranslation(w http.ResponseWriter, r *http.Request) {
 	db := database.NewMongo()
 	vars := mux.Vars(r)
 	t := model.Translation{}
 	translations, err := t.GetLocale(db, vars["lang"])
 	if err != nil {
-		utils.RespondHttpError(w, http.StatusInternalServerError, "Error getting ")
+		log.Println("error generating translation:", err.Error())
+		utils.RespondHttpError(w, http.StatusInternalServerError, "error generating translation")
 		return
 	}
-	utils.RespondJson(w, http.StatusOK, &translations)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(translations))
 }
 
 func CreateTranslation(w http.ResponseWriter, r *http.Request) {
@@ -38,13 +41,26 @@ func CreateTranslation(w http.ResponseWriter, r *http.Request) {
 	}
 	err := t.Insert(db, vars["lang"])
 	if err != nil {
-		log.Fatal("Error creating translation: ", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		log.Println("error creating translation:", err.Error())
+		utils.RespondHttpError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
 func UpdateTranslation(w http.ResponseWriter, r *http.Request) {
-
+	db := database.NewMongo()
+	vars := mux.Vars(r)
+	t := model.Translation{}
+	if err := utils.DecodeBody(r, &t); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err := t.Update(db, vars["lang"], vars["id"])
+	if err != nil {
+		log.Println("error updating translation:", err.Error())
+		utils.RespondHttpError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.RespondJson(w, http.StatusOK, &utils.Response{Code: http.StatusOK, Message: "Successfully updated"})
 }
