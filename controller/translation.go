@@ -1,19 +1,24 @@
 package controller
 
 import (
-	"encoding/json"
 	"github.com/artemidas/translator/database"
 	"github.com/artemidas/translator/model"
 	"github.com/artemidas/translator/utils"
 	"github.com/gorilla/mux"
+	"html/template"
 	"log"
 	"net/http"
 )
 
 func Home(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Hello World!"})
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	index, _ := template.ParseFiles("dist/index.html")
+	err := index.Execute(w, nil)
+	if err != nil {
+		log.Printf("error occurred while executing the template or writing its output: %s", err)
+		return
+	}
 }
 
 func GenerateTranslation(w http.ResponseWriter, r *http.Request) {

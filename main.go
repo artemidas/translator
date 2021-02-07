@@ -11,11 +11,19 @@ import (
 func main() {
 	router := mux.NewRouter().StrictSlash(true)
 
-	router.HandleFunc("/", controller.Home)
 	translator := router.PathPrefix("/api/translate").Subrouter()
 	translator.HandleFunc("/{lang}", controller.GenerateTranslation).Methods(http.MethodGet)
 	translator.HandleFunc("/{lang}/create", controller.CreateTranslation).Methods(http.MethodPost)
 	translator.HandleFunc("/{lang}/update/{id}", controller.UpdateTranslation).Methods(http.MethodPut)
+
+	files := http.FileServer(http.Dir("dist"))
+	router.PathPrefix("/css").Handler(http.StripPrefix("/", files))
+	router.PathPrefix("/img").Handler(http.StripPrefix("/", files))
+	router.PathPrefix("/js").Handler(http.StripPrefix("/", files))
+	router.PathPrefix("/favicon.ico").Handler(http.StripPrefix("/", files))
+	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "dist/index.html")
+	})
 
 	srv := &http.Server{
 		Handler: router,
