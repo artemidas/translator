@@ -51,8 +51,16 @@ func (t *Translation) Insert(db *mongo.Client, locale string) error {
 	c := db.Database(database.DbName).Collection(locale)
 	t.CreatedAt = time.Now().UTC()
 	t.UpdatedAt = time.Now().UTC()
+	ctx := context.Background()
+	count, countErr := c.CountDocuments(ctx, bson.M{"key": t.Key})
+	if countErr != nil {
+		return countErr
+	}
+	if count != 0 {
+		return errors.New("record exists")
+	}
 	_, err := c.InsertOne(context.TODO(), t)
-	defer db.Disconnect(context.Background())
+	defer db.Disconnect(ctx)
 	if err != nil {
 		return err
 	}
