@@ -4,7 +4,7 @@ import (
 	"github.com/artemidas/translator/database"
 	"github.com/artemidas/translator/model"
 	"github.com/artemidas/translator/utils"
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"html/template"
 	"log"
 	"net/http"
@@ -21,51 +21,51 @@ func Home(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GenerateTranslation(w http.ResponseWriter, r *http.Request) {
+func GenerateTranslation(c *gin.Context) {
 	db := database.NewMongo()
-	vars := mux.Vars(r)
 	t := model.Translation{}
-	translations, err := t.GetLocale(db, vars["lang"])
+	translations, err := t.GetLocale(db, c.Param("lang"))
 	if err != nil {
 		log.Println("error generating translation:", err.Error())
-		utils.RespondHttpError(w, http.StatusInternalServerError, "error generating translation")
+		code := http.StatusBadRequest
+		c.JSON(code, utils.Response{Code: code, Message: "error generating translation"})
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(translations))
+	c.Status(http.StatusOK)
+	c.Header("Content-Type", "application/json")
+	c.Writer.Write([]byte(translations))
 }
 
-func CreateTranslation(w http.ResponseWriter, r *http.Request) {
+func CreateTranslation(c *gin.Context) {
 	db := database.NewMongo()
-	vars := mux.Vars(r)
 	t := model.Translation{}
-	if err := utils.DecodeBody(r, &t); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if err := c.BindJSON(&t); err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	err := t.Insert(db, vars["lang"])
+	err := t.Insert(db, c.Param("lang"))
 	if err != nil {
 		log.Println("error creating translation:", err.Error())
-		utils.RespondHttpError(w, http.StatusInternalServerError, err.Error())
+		code := http.StatusBadRequest
+		c.JSON(code, utils.Response{Code: code, Message: err.Error()})
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	c.JSON(http.StatusOK, &utils.Response{Code: http.StatusOK, Message: "translation created"})
 }
 
-func UpdateTranslation(w http.ResponseWriter, r *http.Request) {
+func UpdateTranslation(c *gin.Context) {
 	db := database.NewMongo()
-	vars := mux.Vars(r)
 	t := model.Translation{}
-	if err := utils.DecodeBody(r, &t); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if err := c.BindJSON(&t); err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	err := t.Update(db, vars["lang"], vars["id"])
+	err := t.Update(db, c.Param("lang"), c.Param("id"))
 	if err != nil {
 		log.Println("error updating translation:", err.Error())
-		utils.RespondHttpError(w, http.StatusInternalServerError, err.Error())
+		code := http.StatusBadRequest
+		c.JSON(code, utils.Response{Code: code, Message: err.Error()})
 		return
 	}
-	utils.RespondJson(w, http.StatusOK, &utils.Response{Code: http.StatusOK, Message: "Successfully updated"})
+	c.JSON(http.StatusOK, &utils.Response{Code: http.StatusOK, Message: "Successfully updated"})
 }

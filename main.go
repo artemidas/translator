@@ -2,36 +2,26 @@ package main
 
 import (
 	"github.com/artemidas/translator/controller"
-	"github.com/gorilla/mux"
-	"log"
-	"net/http"
-	"time"
+	"github.com/gin-gonic/contrib/static"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	router := mux.NewRouter().StrictSlash(true)
+	router := gin.Default()
 
-	translator := router.PathPrefix("/api/translate").Subrouter()
-	translator.HandleFunc("/{lang}", controller.GenerateTranslation).Methods(http.MethodGet)
-	translator.HandleFunc("/{lang}/create", controller.CreateTranslation).Methods(http.MethodPost)
-	translator.HandleFunc("/{lang}/update/{id}", controller.UpdateTranslation).Methods(http.MethodPut)
-
-	files := http.FileServer(http.Dir("dist"))
-	router.PathPrefix("/css").Handler(http.StripPrefix("/", files))
-	router.PathPrefix("/img").Handler(http.StripPrefix("/", files))
-	router.PathPrefix("/js").Handler(http.StripPrefix("/", files))
-	router.PathPrefix("/favicon.ico").Handler(http.StripPrefix("/", files))
-	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "dist/index.html")
-	})
-
-	srv := &http.Server{
-		Handler: router,
-		Addr:    "127.0.0.1:8000",
-		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+	translator := router.Group("/api/translate")
+	{
+		translator.GET("/:lang", controller.GenerateTranslation)
+		translator.POST("/:lang/create", controller.CreateTranslation)
+		translator.PUT("/:lang/update/:id", controller.UpdateTranslation)
+		translator.DELETE("/:lang/delete/:id", controller.DeleteTranslation)
 	}
 
-	log.Fatal(srv.ListenAndServe())
+	router.Use(static.Serve("/", static.LocalFile("./dist", true)))
+	router.Static("/css", "./dist/css")
+	router.Static("/img", "./dist/img")
+	router.Static("/js", "./dist/js")
+	router.StaticFile("/favicon.ico", "./dist/favicon.ico")
+
+	router.Run(":8000")
 }
