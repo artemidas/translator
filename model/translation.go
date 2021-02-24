@@ -80,3 +80,20 @@ func (t *Translation) Update(db *mongo.Client, locale string, objectID string) e
 	}
 	return nil
 }
+
+func (t *Translation) Delete(db *mongo.Client, locale string, objectID string) error {
+	c := db.Database(database.DbName).Collection(locale)
+	id, _ := primitive.ObjectIDFromHex(objectID)
+	if id.IsZero() {
+		return errors.New("record not found")
+	}
+	deleted, err := c.DeleteOne(context.TODO(), bson.M{"_id": id})
+	if deleted.DeletedCount > 0 {
+		log.Printf("deleted %d document", deleted.DeletedCount)
+	}
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	return nil
+}

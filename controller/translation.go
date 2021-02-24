@@ -69,3 +69,17 @@ func UpdateTranslation(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, &utils.Response{Code: http.StatusOK, Message: "Successfully updated"})
 }
+
+func DeleteTranslation(c *gin.Context) {
+	db := database.NewMongo()
+	t := model.Translation{}
+	err := t.Delete(db, c.Param("lang"), c.Param("id"))
+	if err != nil {
+		log.Println("error deleting translation:", err.Error())
+		code := http.StatusBadRequest
+		c.JSON(code, utils.Response{Code: code, Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, &utils.Response{Code: http.StatusOK, Message: "successfully deleted"})
+
+}
